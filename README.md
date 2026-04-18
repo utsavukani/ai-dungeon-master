@@ -32,22 +32,22 @@
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│                    Next.js Frontend                      │
+│                    Next.js Frontend                     |
 │  AuthPage → CampaignSelect → ChatPanel + Sidebar        │
 │  (Vercel)           WebSocket (wss://)                  │
 └──────────────────────┬──────────────────────────────────┘
                        │ wss://
 ┌──────────────────────▼──────────────────────────────────┐
-│                   FastAPI Backend                        │
+│                   FastAPI Backend                       |
 │                                                         │
 │   WebSocket Handler                                     │
 │        │                                                │
 │   ┌────▼─────────────────────────┐                      │
 │   │     GameAgentWorkflow        │                      │
-│   │  ┌──────────┐  ┌──────────┐ │                      │
-│   │  │ Narrator │→ │Extractor │ │  ← Two-agent pipeline│
-│   │  │  (LLM)   │  │  (LLM)   │ │                      │
-│   │  └──────────┘  └──────────┘ │                      │
+│   │  ┌──────────┐  ┌──────────┐  │                      │
+│   │  │ Narrator │→ │Extractor │  │  ← Two-agent pipeline│
+│   │  │  (LLM)   │  │  (LLM)   │  │                      │
+│   │  └──────────┘  └──────────┘  │                      │
 │   └──────────────────────────────┘                      │
 │        │                                                │
 │   ┌────▼──────────────────────────────┐                 │
