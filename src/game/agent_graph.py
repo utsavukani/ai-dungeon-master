@@ -1,58 +1,61 @@
 import time
 from typing import TypedDict, Dict, Any, Optional
-from langgraph.graph import StateGraph, END
 import structlog
 
 logger = structlog.get_logger()
 
+
 class GameState(TypedDict):
-    """The central state dictionary passed between all AI agents in the LangGraph."""
+    """The central state dictionary passed between all AI agents."""
     player_input: str
     context: str
     turn_number: int
-    
-    # Updated by Narrator Node
+
+    # Updated by narrator step
     ai_response: str
     response_time: float
-    
-    # Updated by Extraction Node
+
+    # Updated by extraction step
     extracted_events: Optional[Dict[str, Any]]
 
 
 class GameAgentWorkflow:
-    """Manages the Multi-Agent LangGraph workflow."""
-    
+    """Manages the two-step AI workflow: Narrator → Extractor.
+
+    Previously used LangGraph for this sequential pipeline, but since
+    the flow never branches we handle it with simple async calls instead,
+    removing a heavy production dependency.
+    """
+
     def __init__(self, llm_client, prompt_manager, stream_callback=None):
         self.llm_client = llm_client
         self.prompt_manager = prompt_manager
         self.stream_callback = stream_callback
-        
-        # 1. Initialize the Graph
-        builder = StateGraph(GameState)
-        
-        # 2. Add our two primary nodes (Agents)
-        builder.add_node("narrator", self.narrator_node)
-        builder.add_node("extractor", self.extraction_node)
-        
-        # 3. Define the flow: Start -> Narrator -> Extractor -> Finish
-        builder.set_entry_point("narrator")
-        builder.add_edge("narrator", "extractor")
-        builder.add_edge("extractor", END)
-        
-        # Compile into a runnable async application
-        self.app = builder.compile()
 
-    async def narrator_node(self, state: GameState):
-        """Node 1: Generates the main story and streams it to the player's terminal."""
+    async def run(self, initial_state: GameState) -> GameState:
+        """Execute narrator → extractor sequentially and return the final state."""
+        state = dict(initial_state)
+
+        # Step 1: Narrator
+        narrator_result = await self.narrator_node(state)
+        state.update(narrator_result)
+
+        # Step 2: Extractor
+        extractor_result = await self.extraction_node(state)
+        state.update(extractor_result)
+
+        return state
+
+    async def narrator_node(self, state: dict) -> dict:
+        """Step 1: Generate the main story and stream it to the player."""
         prompt = self.prompt_manager.build_enhanced_game_prompt(
             state["player_input"], state["context"], state["turn_number"]
         )
-        
+
         start_time = time.time()
         print("\n🎭 DM: ", end="", flush=True)
-        
+
         ai_response = ""
-        # We handle streaming manually INSIDE the node to ensure terminal output is flawless
         async for chunk in self.llm_client.generate_response_stream(prompt):
             print(chunk, end="", flush=True)
             ai_response += chunk
@@ -63,18 +66,14 @@ class GameAgentWorkflow:
                 else:
                     self.stream_callback(chunk)
         print()
-        
-        response_time = time.time() - start_time
-        
-        return {
-            "ai_response": ai_response, 
-            "response_time": response_time
-        }
 
-    async def extraction_node(self, state: GameState):
-        """Node 2: Silently reads the generated story and extracts structured game mechanics."""
+        response_time = time.time() - start_time
+        return {"ai_response": ai_response, "response_time": response_time}
+
+    async def extraction_node(self, state: dict) -> dict:
+        """Step 2: Silently extract structured game mechanics from the DM response."""
         ai_response = state["ai_response"]
-        
+
         prompt = f'''
 RULES — read carefully:
 - "added_items": list of item NAMES as plain strings. Example: ["Iron Sword", "Health Potion"]. NOT objects. Only items physically given/found/picked up.

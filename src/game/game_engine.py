@@ -78,8 +78,7 @@ class UltimateGameEngine:
 
         initial_prompt = "Create an exciting fantasy RPG opening that: 1. Sets a vivid, immersive location 2. Introduces the player as an adventurer with basic equipment 3. Presents an initial quest or challenge 4. Mentions NPCs the player can interact with 5. Gives 3-4 clear action options. Keep it engaging but under 200 words."
         
-        # Invoke the LangGraph pipeline for the first time
-        initial_state = await self.agent_workflow.app.ainvoke({
+        initial_state = await self.agent_workflow.run({
             "player_input": initial_prompt,
             "context": "",
             "turn_number": 0
@@ -105,8 +104,7 @@ class UltimateGameEngine:
         self.game_stats['memory_retrievals'] += 1
         enhanced_context = f"{context}\n{self._get_character_context()}"
 
-        # Route through LangGraph
-        final_state = await self.agent_workflow.app.ainvoke({
+        final_state = await self.agent_workflow.run({
             "player_input": player_input,
             "context": enhanced_context,
             "turn_number": self.memory_manager.turn_counter
