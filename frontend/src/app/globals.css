@@ -1,0 +1,128 @@
+:root {
+  --bg-primary: #0f1115;
+  --bg-secondary: #1a1c23;
+  --bg-tertiary: #252830;
+  
+  --text-primary: #f0f2f5;
+  --text-secondary: #9ba1a6;
+  --text-accent: #64ffda;
+  
+  --border-light: rgba(255, 255, 255, 0.08);
+  --border-glow: rgba(100, 255, 218, 0.3);
+  
+  --danger: #ff4757;
+  --success: #2ed573;
+  --warning: #ffa502;
+  
+  --font-body: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-mono: 'Fira Code', 'Courier New', monospace;
+}
+
+* {
+  box-sizing: border-box;
+  padding: 0;
+  margin: 0;
+}
+
+body {
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+
+/* Glassmorphism Classes */
+.glass-panel {
+  background: rgba(26, 28, 35, 0.7);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--border-light);
+  border-radius: 12px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+}
+
+/* Scrollbar Styling */
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-track {
+  background: var(--bg-primary);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--bg-tertiary);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-secondary);
+}
+
+/* Buttons */
+.btn-primary {
+  background: transparent;
+  color: var(--text-accent);
+  border: 1px solid var(--text-accent);
+  padding: 8px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-family: var(--font-mono);
+  font-size: 14px;
+  transition: all 0.2s ease;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.btn-primary:hover {
+  background: rgba(100, 255, 218, 0.1);
+  box-shadow: 0 0 10px var(--border-glow);
+}
+
+/* Loading animations */
+@keyframes pulse {
+  0% { opacity: 0.5; }
+  50% { opacity: 1; }
+  100% { opacity: 0.5; }
+}
+
+.animate-pulse {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Layout Utilities */
+.app-container {
+  display: flex;
+  height: 100dvh;
+  width: 100vw;
+  overflow: hidden;
+}
+
+.chat-section {
+  flex: 7;
+  display: flex;
+  flex-direction: column;
+  padding: 20px;
+  min-height: 0;
+  min-width: 0;
+}
+
+.sidebar-section {
+  flex: 3;
+  padding: 20px;
+  border-left: 1px solid var(--border-light);
+  background: var(--bg-secondary);
+  overflow-y: auto;
+}
+
+@media (max-width: 768px) {
+  .app-container {
+    flex-direction: column;
+  }
+  .chat-section {
+    flex: 1;
+    min-height: 0;
+  }
+  .sidebar-section {
+    display: none; /* We will use a toggle button on mobile later */
+  }
+}

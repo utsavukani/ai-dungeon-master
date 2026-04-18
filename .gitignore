@@ -1,0 +1,45 @@
+# ── Python ───────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# ── Environment & Secrets ─────────────────────────────────
+.env
+.env.*
+!.env.example
+
+# ── Database & Runtime Data ───────────────────────────────
+data/
+*.db
+*.sqlite3
+
+# ── Testing & Coverage ───────────────────────────────────
+.pytest_cache/
+.coverage
+htmlcov/
+coverage.xml
+
+# ── IDEs & OS ────────────────────────────────────────────
+.vscode/
+.idea/
+*.DS_Store
+Thumbs.db
+
+# ── Node / Frontend ───────────────────────────────────────
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+frontend/.turbo/
+
+# ── ChromaDB vector store (runtime data) ─────────────────
+data/chroma_db/
+
+# ── Misc ─────────────────────────────────────────────────
+*.log
