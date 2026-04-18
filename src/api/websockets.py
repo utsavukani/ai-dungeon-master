@@ -14,21 +14,20 @@ async def websocket_endpoint(websocket: WebSocket, campaign_id: str):
     # Verify campaign exists (for our mock testing, we will just blindly start the engine
     # which will create the campaign_id if handled, or fail gracefully)
     
-    # Initialize the Game Engine per connection to the specific isolated Campaign Session
-    game = UltimateGameEngine(campaign_id=campaign_id)
-    
-    # Custom stream callback to emit tokens real-time over WebSocket
-    async def emit_token(chunk: str):
-        # We wrap it subtly inside a token event
-        await websocket.send_json({
-            "type": "token",
-            "payload": {"text": chunk}
-        })
-
-    # Hook the callback into the agent workflow
-    game.agent_workflow.stream_callback = emit_token
-
     try:
+        # Initialize the Game Engine per connection to the specific isolated Campaign Session
+        game = UltimateGameEngine(campaign_id=campaign_id)
+        
+        # Custom stream callback to emit tokens real-time over WebSocket
+        async def emit_token(chunk: str):
+            await websocket.send_json({
+                "type": "token",
+                "payload": {"text": chunk}
+            })
+
+        # Hook the callback into the agent workflow
+        game.agent_workflow.stream_callback = emit_token
+
         # Send initial starting message event
         initial_response = await game.start_game()
         
@@ -69,3 +68,10 @@ async def websocket_endpoint(websocket: WebSocket, campaign_id: str):
 
     except WebSocketDisconnect:
         print(f"Client disconnected from campaign {campaign_id}.")
+    except Exception as e:
+        print(f"WebSocket error in campaign {campaign_id}: {e}")
+        try:
+            await websocket.send_json({"type": "error", "content": str(e)})
+            await websocket.close()
+        except Exception:
+            pass
