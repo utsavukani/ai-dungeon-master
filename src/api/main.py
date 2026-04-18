@@ -16,7 +16,11 @@ app = FastAPI(
 # Enable CORS for the Next.js frontend
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"], # For local development
+    allow_origins=[
+        "http://localhost:3000",       # local dev
+        "https://*.vercel.app",        # Vercel preview deployments
+        "https://ai-dungeon-master-coral.vercel.app",  # production Vercel
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
