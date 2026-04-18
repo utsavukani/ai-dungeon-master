@@ -165,29 +165,46 @@ NEXT_PUBLIC_API_URL=https://ai-dungeon-master-api.onrender.com
 ai-dungeon-master/
 ├── src/
 │   ├── api/
-│   │   ├── main.py          # FastAPI app + CORS
-│   │   ├── routes.py        # REST endpoints (auth, campaigns, character, quests)
-│   │   └── websockets.py    # WebSocket game handler
+│   │   ├── main.py            # FastAPI app entry point + CORS
+│   │   ├── routes.py          # REST endpoints: auth, campaigns, character, quests
+│   │   └── websockets.py      # WebSocket game session handler
 │   ├── game/
-│   │   ├── game_engine.py   # Core game loop orchestrator
-│   │   ├── agent_graph.py   # Multi-agent workflow (Narrator → Extractor)
-│   │   ├── character_sheet.py
-│   │   └── quest_tracker.py
+│   │   ├── game_engine.py     # Core game loop orchestrator
+│   │   ├── agent_graph.py     # Two-agent pipeline: Narrator → Extractor
+│   │   ├── character_sheet.py # Character stats, XP, inventory (PostgreSQL-backed)
+│   │   └── quest_tracker.py   # Quest CRUD against PostgreSQL
 │   ├── memory/
-│   │   └── memory_manager.py  # Working + Vector + SQL memory stack
+│   │   └── memory_manager.py  # Three-tier memory: Working + ChromaDB + SQL
 │   ├── llm/
-│   │   └── provider.py        # Groq API client (streaming + JSON mode)
+│   │   └── provider.py        # LLM abstraction: GroqProvider + OllamaProvider
 │   └── database/
-│       ├── database.py        # SQLAlchemy engine + init
-│       └── models.py          # ORM models (User, Campaign, Character, Quest, NPC...)
+│       ├── database.py        # SQLAlchemy engine (auto-detects SQLite vs PostgreSQL)
+│       └── models.py          # ORM models: User, Campaign, Character, Quest, NPC, GameTurn
 ├── frontend/
 │   └── src/
-│       ├── app/               # Next.js App Router
+│       ├── app/               # Next.js 15 App Router pages
 │       ├── components/        # AuthPage, CampaignSelect, ChatPanel, Sidebar
-│       └── lib/api.ts         # Centralized API URL config
-├── Dockerfile                 # Production Docker image
+│       └── lib/api.ts         # Central API URL + WebSocket URL config
+├── tests/                     # pytest suite (SQLite in-memory, ChromaDB mocked)
+│   ├── conftest.py            # Fixtures: DB setup, campaign factory, ChromaDB mock
+│   ├── test_character.py
+│   ├── test_quests.py
+│   ├── test_memory.py
+│   ├── test_game_engine.py
+│   └── test_llm.py
+├── .github/workflows/ci.yml   # GitHub Actions: install → pytest
+├── docker-compose.yml         # Local Docker stack: FastAPI + PostgreSQL 16
+├── Dockerfile                 # Production image (pre-bakes sentence-transformers)
+├── pytest.ini                 # asyncio_mode = auto
+├── .env.example               # Template for DATABASE_URL + GROQ_API_KEY
 └── requirements.txt
 ```
+
+> **PostgreSQL & SQLAlchemy — how they relate:**  
+> `SQLAlchemy` is the **ORM** (writes the SQL for you in Python).  
+> `psycopg2-binary` (in `requirements.txt`) is the **PostgreSQL driver** it talks to.  
+> `docker-compose.yml` spins up a local `postgres:16-alpine` container.  
+> In production, `DATABASE_URL` points to [Neon](https://neon.tech) — a serverless PostgreSQL cloud.
 
 ---
 
