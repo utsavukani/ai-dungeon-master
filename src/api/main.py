@@ -13,15 +13,13 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# Enable CORS for the Next.js frontend
+# Enable CORS for all origins.
+# We use localStorage (not cookies) for auth, so allow_credentials=False
+# is safe and allows us to use the wildcard origin.
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000",       # local dev
-        "https://*.vercel.app",        # Vercel preview deployments
-        "https://ai-dungeon-master-coral.vercel.app",  # production Vercel
-    ],
-    allow_credentials=True,
+    allow_origins=["*"],
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
