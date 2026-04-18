@@ -1,10 +1,12 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { API_URL } from '@/lib/api';
 
 interface AuthPageProps {
   onAuthSuccess: (userId: string, username: string) => void;
 }
+
+type BackendStatus = 'checking' | 'ready' | 'waking' | 'offline';
 
 export default function AuthPage({ onAuthSuccess }: AuthPageProps) {
   const [tab, setTab] = useState<'login' | 'register'>('login');
@@ -12,9 +14,45 @@ export default function AuthPage({ onAuthSuccess }: AuthPageProps) {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [backendStatus, setBackendStatus] = useState<BackendStatus>('checking');
+  const retryRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // On mount: wake the Render backend (free tier sleeps after 15 min idle)
+  useEffect(() => {
+    let attempts = 0;
+    const maxAttempts = 10; // ~50 seconds max
+
+    const ping = async () => {
+      try {
+        const res = await fetch(`${API_URL}/health`, { signal: AbortSignal.timeout(8000) });
+        if (res.ok) {
+          setBackendStatus('ready');
+          return;
+        }
+      } catch {
+        // server sleeping or not yet ready
+      }
+
+      attempts++;
+      if (attempts >= maxAttempts) {
+        setBackendStatus('offline');
+        return;
+      }
+
+      setBackendStatus(attempts === 1 ? 'waking' : 'waking');
+      retryRef.current = setTimeout(ping, 5000);
+    };
+
+    ping();
+
+    return () => {
+      if (retryRef.current) clearTimeout(retryRef.current);
+    };
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (backendStatus !== 'ready') return;
     setError('');
     setLoading(true);
 
@@ -35,11 +73,45 @@ export default function AuthPage({ onAuthSuccess }: AuthPageProps) {
 
       onAuthSuccess(data.user_id, data.username);
     } catch {
-      setError('Cannot reach the server. Is the backend running?');
+      setError('Server unreachable. Please wait a moment and try again.');
     } finally {
       setLoading(false);
     }
   };
+
+  const statusBar = () => {
+    if (backendStatus === 'checking') return (
+      <div style={statusStyle('#64ffda22', '#64ffda66', 'var(--text-accent)')}>
+        ⏳ Checking server...
+      </div>
+    );
+    if (backendStatus === 'waking') return (
+      <div style={statusStyle('rgba(255,200,60,0.08)', 'rgba(255,200,60,0.3)', '#ffc83c')}>
+        🌅 Server waking up — this takes ~30–60s on first visit. Please wait...
+      </div>
+    );
+    if (backendStatus === 'offline') return (
+      <div style={statusStyle('rgba(255,71,87,0.1)', 'rgba(255,71,87,0.3)', 'var(--danger)')}>
+        ❌ Server unreachable. Try refreshing the page.
+      </div>
+    );
+    return null; // 'ready' - show nothing
+  };
+
+  function statusStyle(bg: string, border: string, color: string) {
+    return {
+      background: bg,
+      border: `1px solid ${border}`,
+      borderRadius: '8px',
+      padding: '10px 14px',
+      color,
+      fontSize: '12px',
+      textAlign: 'center' as const,
+      letterSpacing: '0.3px',
+    };
+  }
+
+  const isFormDisabled = backendStatus !== 'ready';
 
   return (
     <div style={{
@@ -79,10 +151,14 @@ export default function AuthPage({ onAuthSuccess }: AuthPageProps) {
           </p>
         </div>
 
+        {/* Backend status bar */}
+        {statusBar()}
+
         {/* Tab switcher */}
         <div style={{
           display: 'flex',
           borderBottom: '1px solid var(--border-light)',
+          marginTop: backendStatus !== 'ready' ? '16px' : '0',
           marginBottom: '28px',
           gap: '4px',
         }}>
@@ -124,6 +200,7 @@ export default function AuthPage({ onAuthSuccess }: AuthPageProps) {
               placeholder="Enter your username"
               autoComplete="username"
               required
+              disabled={isFormDisabled}
               style={{
                 width: '100%',
                 marginTop: '6px',
@@ -136,6 +213,7 @@ export default function AuthPage({ onAuthSuccess }: AuthPageProps) {
                 fontFamily: 'var(--font-body)',
                 fontSize: '15px',
                 transition: 'border-color 0.2s',
+                opacity: isFormDisabled ? 0.5 : 1,
               }}
               onFocus={e => e.target.style.borderColor = 'var(--text-accent)'}
               onBlur={e => e.target.style.borderColor = 'var(--border-light)'}
@@ -154,6 +232,7 @@ export default function AuthPage({ onAuthSuccess }: AuthPageProps) {
               placeholder={tab === 'register' ? 'At least 6 characters' : 'Enter your password'}
               autoComplete={tab === 'login' ? 'current-password' : 'new-password'}
               required
+              disabled={isFormDisabled}
               style={{
                 width: '100%',
                 marginTop: '6px',
@@ -166,6 +245,7 @@ export default function AuthPage({ onAuthSuccess }: AuthPageProps) {
                 fontFamily: 'var(--font-body)',
                 fontSize: '15px',
                 transition: 'border-color 0.2s',
+                opacity: isFormDisabled ? 0.5 : 1,
               }}
               onFocus={e => e.target.style.borderColor = 'var(--text-accent)'}
               onBlur={e => e.target.style.borderColor = 'var(--border-light)'}
@@ -188,17 +268,21 @@ export default function AuthPage({ onAuthSuccess }: AuthPageProps) {
           <button
             id="auth-submit"
             type="submit"
-            disabled={loading || !username.trim() || !password}
+            disabled={loading || !username.trim() || !password || isFormDisabled}
             className="btn-primary"
             style={{
               marginTop: '8px',
               padding: '13px',
               fontSize: '14px',
-              opacity: (loading || !username.trim() || !password) ? 0.5 : 1,
-              cursor: (loading || !username.trim() || !password) ? 'not-allowed' : 'pointer',
+              opacity: (loading || !username.trim() || !password || isFormDisabled) ? 0.5 : 1,
+              cursor: (loading || !username.trim() || !password || isFormDisabled) ? 'not-allowed' : 'pointer',
             }}
           >
-            {loading ? 'Please wait...' : tab === 'login' ? 'Enter the Realm' : 'Create Account'}
+            {loading
+              ? 'Please wait...'
+              : isFormDisabled
+                ? 'Waiting for server...'
+                : tab === 'login' ? 'Enter the Realm' : 'Create Account'}
           </button>
         </form>
       </div>
