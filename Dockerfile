@@ -11,15 +11,9 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Pre-download the sentence-transformers model during build so it is
-# cached inside the image and does NOT need a network call at runtime.
-# Without this, the first WebSocket connection would hang for ~30-60s
-# while downloading ~90 MB from HuggingFace.
-RUN python -c "
-from chromadb.utils import embedding_functions
-embedding_functions.SentenceTransformerEmbeddingFunction(model_name='all-MiniLM-L6-v2')
-print('Model cached successfully')
-"
+# Pre-download the sentence-transformers model at build time so it is
+# cached in the image and requires no network call at runtime.
+RUN python -c "from chromadb.utils import embedding_functions; embedding_functions.SentenceTransformerEmbeddingFunction(model_name='all-MiniLM-L6-v2'); print('Model cached successfully')"
 
 # Copy project
 COPY . .
